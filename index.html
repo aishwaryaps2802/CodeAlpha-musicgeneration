@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Music Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "DM Sans", sans-serif;
+      background: #0d0d12;
+      color: #e8e6f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .card {
+      background: #15151f;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 24px;
+      padding: 48px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    }
+    .icon { font-size: 48px; color: #c9a84c; margin-bottom: 20px; }
+    h1 {
+      font-family: "Playfair Display", serif;
+      font-size: 36px;
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+    .accent { color: #c9a84c; }
+    p { color: #7a78a0; font-size: 15px; line-height: 1.7; margin-bottom: 32px; }
+    .generate-btn {
+      background: linear-gradient(135deg, #c9a84c, #e8a800);
+      color: #000;
+      border: none;
+      padding: 16px 48px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: "DM Sans", sans-serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.3s;
+      box-shadow: 0 8px 30px rgba(201,168,76,0.3);
+    }
+    .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(201,168,76,0.45); }
+    .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .status {
+      margin-top: 24px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      display: none;
+    }
+    .status.success { background: rgba(78,205,196,0.1); color: #4ecdc4; border: 1px solid rgba(78,205,196,0.2); display: block; }
+    .status.error   { background: rgba(224,85,85,0.1);  color: #e05555; border: 1px solid rgba(224,85,85,0.2);  display: block; }
+    .status.loading { background: rgba(201,168,76,0.1); color: #c9a84c; border: 1px solid rgba(201,168,76,0.2); display: block; }
+    .download-btn {
+      display: none;
+      margin-top: 16px;
+      background: transparent;
+      border: 1px solid #c9a84c;
+      color: #c9a84c;
+      padding: 12px 32px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: "DM Sans", sans-serif;
+      transition: all 0.3s;
+      gap: 8px;
+      align-items: center;
+    }
+    .download-btn:hover { background: rgba(201,168,76,0.15); }
+    .download-btn.show { display: inline-flex; }
+    .steps {
+      margin-top: 40px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #7a78a0;
+    }
+    .step-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: rgba(201,168,76,0.15);
+      color: #c9a84c;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon"><i class="fa-solid fa-music"></i></div>
+    <h1>AI <span class="accent">Music</span> Generator</h1>
+    <p>Click the button below to generate an original music composition using a trained LSTM deep learning model.</p>
+
+    <button class="generate-btn" id="generateBtn" onclick="generateMusic()">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      Generate Music
+    </button>
+
+    <div class="status" id="status"></div>
+
+    <button class="download-btn" id="downloadBtn" onclick="window.location='/download'">
+      <i class="fa-solid fa-download"></i>
+      Download MIDI File
+    </button>
+
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div> LSTM model loads trained music patterns</div>
+      <div class="step"><div class="step-num">2</div> Model predicts notes one by one</div>
+      <div class="step"><div class="step-num">3</div> 200 notes generated as a sequence</div>
+      <div class="step"><div class="step-num">4</div> Sequence saved as a MIDI file</div>
+    </div>
+  </div>
+
+  <script>
+    async function generateMusic() {
+      const btn        = document.getElementById('generateBtn');
+      const status     = document.getElementById('status');
+      const downloadBtn= document.getElementById('downloadBtn');
+
+      btn.disabled     = true;
+      status.className = 'status loading';
+      status.textContent = 'Generating music... This may take 1-2 minutes.';
+      downloadBtn.classList.remove('show');
+
+      try {
+        const res  = await fetch('/generate', { method: 'POST' });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          status.className   = 'status success';
+          status.textContent = 'Music generated successfully! Download your MIDI file below.';
+          downloadBtn.classList.add('show');
+        } else {
+          status.className   = 'status error';
+          status.textContent = 'Error: ' + data.message;
+        }
+      } catch (err) {
+        status.className   = 'status error';
+        status.textContent = 'Connection error. Make sure Flask is running.';
+      }
+
+      btn.disabled = false;
+    }
+  </script>
+</body>
+</html>
