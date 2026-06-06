@@ -4,9 +4,7 @@ An AI that composes original music by learning
 patterns from classical MIDI files using a deep 
 learning LSTM neural network.
 
-## Listen to Generated Music
-Download generated.mid from the output folder 
-and play it at https://www.midiplayer.eu
+
 
 ## How It Works
 1. Classical MIDI files parsed using music21
